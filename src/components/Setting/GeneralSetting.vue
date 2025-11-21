@@ -161,7 +161,12 @@
               恢复默认
             </n-button>
           </Transition>
-          <n-select v-model:value="settingStore.globalFont" :options="allFontsData" class="set" />
+          <n-select
+            v-model:value="settingStore.globalFont"
+            :options="allFontsData"
+            class="set"
+            filterable
+          />
         </n-flex>
       </n-card>
       <n-card class="set-item">
@@ -188,6 +193,7 @@
               ...allFontsData.filter((v) => v.value !== 'default'),
             ]"
             class="set"
+            filterable
           />
         </n-flex>
       </n-card>
@@ -215,6 +221,7 @@
               ...allFontsData.filter((v) => v.value !== 'default'),
             ]"
             class="set"
+            filterable
           />
         </n-flex>
       </n-card>
@@ -278,10 +285,10 @@
 <script setup lang="ts">
 import type { SelectOption } from "naive-ui";
 import { useDataStore, useMusicStore, useSettingStore, useStatusStore } from "@/stores";
-import { isDev, isElectron } from "@/utils/helper";
+import { isDev, isElectron } from "@/utils/env";
+import { getCoverColor } from "@/utils/player-utils/song";
 import { isEmpty } from "lodash-es";
 import themeColor from "@/assets/data/themeColor.json";
-import player from "@/utils/player";
 
 const dataStore = useDataStore();
 const musicStore = useMusicStore();
@@ -386,7 +393,7 @@ const modeChange = (val: boolean) => {
 
 // 全局着色更改
 const themeGlobalColorChange = (val: boolean) => {
-  if (val) player.getCoverColor(musicStore.songCover);
+  if (val) getCoverColor(musicStore.songCover);
 };
 
 onMounted(() => {

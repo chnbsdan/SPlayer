@@ -120,16 +120,31 @@ export type CommentType = {
   likedCount?: number;
 };
 
+/**
+ * 播放模式
+ * - repeat: 重复播放
+ * - repeat-once: 重复播放当前歌曲
+ * - shuffle: 随机播放
+ */
 export type PlayModeType = "repeat" | "repeat-once" | "shuffle";
 
+/**
+ * 歌词内容类型
+ */
 export type LyricContentType = {
+  /** 歌词开始时间 */
   time: number;
+  /** 歌词结束时间 */
   endTime: number;
+  /** 歌词持续时间 */
   duration: number;
+  /** 歌词内容 */
   content: string;
+  /** 是否以空格结尾 */
   endsWithSpace: boolean;
 };
 
+/** 歌词类型 */
 export type LyricType = {
   /** 歌词开始时间 */
   time: number;
@@ -143,7 +158,9 @@ export type LyricType = {
   isBG?: boolean;
   /** 是否为对唱歌词 */
   isDuet?: boolean;
+  /** 歌词内容 */
   content: string;
+  /** 歌词内容数组 */
   contents: LyricContentType[];
 };
 
