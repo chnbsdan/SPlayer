@@ -1,6 +1,8 @@
-import type { SongType, CoverType, ArtistType, CommentType, MetaData, CatType } from "@/types/main";
+import { SongType, CoverType, ArtistType, CommentType, MetaData, CatType } from "@/types/main";
 import { msToTime } from "./time";
 import { flatMap, isArray, uniqBy } from "lodash-es";
+import { handleSongQuality } from "./helper";
+import { useDataStore, useMusicStore, useStatusStore } from "@/stores";
 
 type CoverDataType = {
   cover: string;
@@ -67,7 +69,9 @@ export const formatSongsList = (data: any[]): SongType[] => {
       size: Number(item.size || 0),
       path: item.path,
       pc: !!item.pc,
-      quality: item?.quality,
+      quality: item?.path
+        ? handleSongQuality(item.quality, "local")
+        : handleSongQuality(item, "online"),
       playCount: Number(item.playCount || item.listenerCount || 0),
       createTime: Number(item.createTime || item.publishTime) || undefined,
       updateTime: Number(item.lastProgramCreateTime || item.scheduledPublishTime) || undefined,
@@ -280,4 +284,69 @@ export const getLyricLanguage = (lyric: string): string => {
   if (/[\u4e00-\u9fa5]/.test(lyric)) return "zh-CN";
   // 默认英语
   return "en";
+};
+
+/**
+ * 获取当前播放歌曲
+ * @returns 当前播放歌曲
+ */
+export const getPlaySongData = (): SongType | null => {
+  const dataStore = useDataStore();
+  const musicStore = useMusicStore();
+  const statusStore = useStatusStore();
+  // 若为私人FM
+  if (statusStore.personalFmMode) {
+    return musicStore.personalFMSong;
+  }
+  // 播放列表
+  const playlist = dataStore.playList;
+  if (!playlist.length) return null;
+  return playlist[statusStore.playIndex];
+};
+
+/**
+ * 获取播放信息对象
+ * @param song 歌曲
+ * @param sep 分隔符
+ * @returns 播放信息对象
+ */
+export const getPlayerInfoObj = (
+  song?: SongType,
+  sep: string = "/",
+): { name: string; artist: string; album: string } | null => {
+  const playSongData = song || getPlaySongData();
+  if (!playSongData) return null;
+
+  // 标题
+  const name = `${playSongData.name || "未知歌曲"}`;
+
+  // 歌手
+  const artist =
+    playSongData.type === "radio"
+      ? "播客电台"
+      : Array.isArray(playSongData.artists)
+        ? playSongData.artists.map((artists: { name: string }) => artists.name).join(sep)
+        : String(playSongData?.artists || "未知歌手");
+
+  // 专辑
+  const album =
+    playSongData.type === "radio"
+      ? "播客电台"
+      : typeof playSongData.album === "object"
+        ? playSongData.album.name
+        : String(playSongData.album || "未知专辑");
+
+  return { name, artist, album };
+};
+
+/**
+ * 获取播放信息
+ * @param song 歌曲
+ * @param sep 分隔符
+ * @returns 播放信息
+ */
+export const getPlayerInfo = (song?: SongType, sep: string = "/"): string | null => {
+  const info = getPlayerInfoObj(song, sep);
+  if (!info) return null;
+  return `${info.name} - ${info.artist}`;
 };

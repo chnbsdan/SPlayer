@@ -251,9 +251,7 @@
         <div class="label">
           <n-text class="name">
             启用在线 TTML 歌词
-            <n-tag type="warning" size="small" round style="display: inline; vertical-align: middle"
-              >Beta</n-tag
-            >
+            <n-tag type="warning" size="small" round> Beta </n-tag>
           </n-text>
           <n-text class="tip" :depth="3">
             是否从 AMLL TTML DB 获取歌词（如有），TTML
@@ -262,6 +260,17 @@
         </div>
         <n-switch v-model:value="settingStore.enableTTMLLyric" class="set" :round="false" />
       </n-card>
+      <n-collapse-transition :show="settingStore.enableTTMLLyric">
+        <n-card class="set-item">
+          <div class="label">
+            <n-text class="name">AMLL TTML DB 地址</n-text>
+            <n-text class="tip" :depth="3">
+              AMLL TTML DB 地址，请确保地址正确，否则将导致歌词获取失败
+            </n-text>
+          </div>
+          <n-button type="primary" strong secondary @click="openAMLLServer"> 配置 </n-button>
+        </n-card>
+      </n-collapse-transition>
       <n-card class="set-item">
         <div class="label">
           <n-text class="name">启用歌词排除</n-text>
@@ -530,6 +539,30 @@
       </n-card>
       <n-card class="set-item">
         <div class="label">
+          <n-text class="name">文本背景遮罩</n-text>
+          <n-text class="tip" :depth="3">防止在某些界面看不清文本</n-text>
+        </div>
+        <n-switch
+          v-model:value="desktopLyricConfig.textBackgroundMask"
+          :round="false"
+          class="set"
+          @update:value="saveDesktopLyricConfig"
+        />
+      </n-card>
+      <n-card class="set-item">
+        <div class="label">
+          <n-text class="name">始终展示播放信息</n-text>
+          <n-text class="tip" :depth="3">是否始终展示当前歌曲名及歌手</n-text>
+        </div>
+        <n-switch
+          v-model:value="desktopLyricConfig.alwaysShowPlayInfo"
+          :round="false"
+          class="set"
+          @update:value="saveDesktopLyricConfig"
+        />
+      </n-card>
+      <n-card class="set-item">
+        <div class="label">
           <n-text class="name">恢复默认配置</n-text>
           <n-text class="tip" :depth="3">恢复默认桌面歌词配置</n-text>
         </div>
@@ -540,16 +573,17 @@
 </template>
 
 <script setup lang="ts">
+import { NFlex, NText } from "naive-ui";
 import { useSettingStore, useStatusStore } from "@/stores";
 import { cloneDeep, isEqual } from "lodash-es";
 import { isElectron } from "@/utils/env";
-import { openLyricExclude } from "@/utils/modal";
+import { openLyricExclude, openAMLLServer } from "@/utils/modal";
 import { LyricConfig } from "@/types/desktop-lyric";
-import { usePlayer } from "@/utils/player";
+import { usePlayerController } from "@/core/player/PlayerController";
 import { SelectOption } from "naive-ui";
 import defaultDesktopLyricConfig from "@/assets/data/lyricConfig";
 
-const player = usePlayer();
+const player = usePlayerController();
 const statusStore = useStatusStore();
 const settingStore = useSettingStore();
 
@@ -639,10 +673,12 @@ const getAllSystemFonts = async () => {
   });
 };
 
-onMounted(() => {
+onMounted(async () => {
   if (isElectron) {
     getDesktopLyricConfig();
     getAllSystemFonts();
+    // 恢复地址
+    await window.api.store.set("amllDbServer", settingStore.amllDbServer);
   }
 });
 </script>

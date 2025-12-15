@@ -66,7 +66,7 @@ export const useMusicStore = defineStore("music", {
     isHasPlayer(state): boolean {
       return state.playSong?.id !== 0;
     },
-    // 歌曲封面
+    /** 歌曲封面 */
     songCover(state): string {
       return state.playSong.path
         ? state.playSong.cover
@@ -78,10 +78,14 @@ export const useMusicStore = defineStore("music", {
     },
   },
   actions: {
-    // 恢复默认音乐数据
+    /** 重置音乐数据 */
     resetMusicData() {
       this.playSong = { ...defaultMusicData };
-      this.songLyric = { lrcData: [], yrcData: [] };
+      this.playPlaylistId = 0;
+      this.setSongLyric({ lrcData: [], yrcData: [] }, true);
+      if (isElectron) {
+        window.electron.ipcRenderer.send("play-song-change", undefined);
+      }
     },
     /**
      * 设置/更新歌曲歌词数据

@@ -1,8 +1,10 @@
 import { h } from "vue";
 import type { CoverType, UpdateInfoType, SettingType, SongType } from "@/types/main";
+import { CURRENT_AGREEMENT_VERSION } from "@/constants/agreement";
+import { NScrollbar } from "naive-ui";
 import { isLogin } from "./auth";
 import { isArray, isFunction } from "lodash-es";
-import { useDataStore } from "@/stores";
+import { useDataStore, useSettingStore } from "@/stores";
 import router from "@/router";
 import Login from "@/components/Modal/Login/Login.vue";
 import JumpArtist from "@/components/Modal/JumpArtist.vue";
@@ -13,19 +15,25 @@ import BatchList from "@/components/Modal/BatchList.vue";
 import CloudMatch from "@/components/Modal/CloudMatch.vue";
 import CreatePlaylist from "@/components/Modal/CreatePlaylist.vue";
 import UpdatePlaylist from "@/components/Modal/UpdatePlaylist.vue";
-import DownloadSong from "@/components/Modal/DownloadSong.vue";
+import DownloadModal from "@/components/Modal/DownloadModal.vue";
 import MainSetting from "@/components/Setting/MainSetting.vue";
 import UpdateApp from "@/components/Modal/UpdateApp.vue";
-import ExcludeLyrics from "@/components/Modal/ExcludeLyrics.vue";
+import ExcludeLyrics from "@/components/Modal/Setting/ExcludeLyrics.vue";
 import ChangeRate from "@/components/Modal/ChangeRate.vue";
 import AutoClose from "@/components/Modal/AutoClose.vue";
 import Equalizer from "@/components/Modal/Equalizer.vue";
-import { NScrollbar } from "naive-ui";
+import SongUnlockManager from "@/components/Modal/Setting/SongUnlockManager.vue";
+import SidebarHideManager from "@/components/Modal/Setting/SidebarHideManager.vue";
+import HomePageSectionManager from "@/components/Modal/Setting/HomePageSectionManager.vue";
+import CopyLyrics from "@/components/Modal/CopyLyrics.vue";
+import AMLLServer from "@/components/Modal/Setting/AMLLServer.vue";
 
-// 用户协议
 export const openUserAgreement = () => {
-  const isAgree = window.localStorage.getItem("isAgree");
-  if (isAgree) return;
+  const settingStore = useSettingStore();
+  // 检查是否需要重新同意协议
+  const needReAgree = settingStore.userAgreementVersion !== CURRENT_AGREEMENT_VERSION;
+  // 如果已经同意了当前版本，则不需要再弹窗
+  if (!needReAgree) return;
   const modal = window.$modal.create({
     preset: "card",
     transformOrigin: "center",
@@ -40,8 +48,7 @@ export const openUserAgreement = () => {
       return h(UserAgreement, {
         onClose: () => {
           modal.destroy();
-          // 储存状态
-          window.localStorage.setItem("isAgree", Date.now().toString());
+          // 储存状态（这个逻辑现在在 UserAgreement 组件内部处理）
         },
       });
     },
@@ -205,7 +212,26 @@ export const openDownloadSong = (song: SongType) => {
     style: { width: "600px" },
     title: "下载歌曲",
     content: () => {
-      return h(DownloadSong, { id: song.id, onClose: () => modal.destroy() });
+      return h(DownloadModal, { songId: song.id, onClose: () => modal.destroy() });
+    },
+  });
+};
+
+// 批量下载歌曲
+export const openDownloadSongs = (songs: SongType[]): void => {
+  if (!isLogin()) return openUserLogin();
+  if (!songs || songs.length === 0) {
+    window.$message.warning("请选择要下载的歌曲");
+    return;
+  }
+  const modal = window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "600px" },
+    title: "批量下载",
+    content: () => {
+      return h(DownloadModal, { songs, onClose: () => modal.destroy() });
     },
   });
 };
@@ -316,6 +342,80 @@ export const openDescModal = (content: string, title: string = "歌单简介") =
             h("div", { style: { whiteSpace: "pre-wrap" } }, { default: () => content }),
         },
       );
+    },
+  });
+};
+
+/** 打开音源管理弹窗 */
+export const openSongUnlockManager = () => {
+  window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "500px" },
+    title: "音源管理",
+    content: () => {
+      return h(SongUnlockManager);
+    },
+  });
+};
+
+/** 打开侧边栏隐藏管理弹窗 */
+export const openSidebarHideManager = () => {
+  window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "500px" },
+    title: "侧边栏隐藏管理",
+    content: () => {
+      return h(SidebarHideManager);
+    },
+  });
+};
+
+/** 打开首页栏目配置弹窗 */
+export const openHomePageSectionManager = () => {
+  window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "500px" },
+    title: "首页栏目配置",
+    content: () => {
+      return h(HomePageSectionManager);
+    },
+  });
+};
+
+/** 打开复制歌词弹窗 */
+export const openCopyLyrics = () => {
+  const modal = window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "500px" },
+    title: "复制歌词",
+    content: () => {
+      return h(CopyLyrics, {
+        onClose: () => modal.destroy(),
+      });
+    },
+  });
+};
+
+/** 打开 AMLL 服务器配置弹窗 */
+export const openAMLLServer = () => {
+  const modal = window.$modal.create({
+    preset: "card",
+    transformOrigin: "center",
+    autoFocus: false,
+    style: { width: "600px" },
+    title: "AMLL TTML DB 服务器配置",
+    content: () => {
+      return h(AMLLServer, {
+        onClose: () => modal.destroy(),
+      });
     },
   });
 };

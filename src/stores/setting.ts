@@ -1,7 +1,13 @@
 import { defineStore } from "pinia";
 import { keywords, regexes } from "@/assets/data/exclude";
+import { SongUnlockServer } from "@/core/player/SongManager";
+import type { SongLevelType } from "@/types/main";
+import { defaultAMLLDbServer } from "@/utils/meta";
+import { CURRENT_SETTING_SCHEMA_VERSION, settingMigrations } from "./migrations/settingMigrations";
 
 export interface SettingState {
+  /** Schema 版本号（可选，用于数据迁移） */
+  schemaVersion?: number;
   /** 明暗模式 */
   themeMode: "light" | "dark" | "auto";
   /** 主题类别 */
@@ -65,14 +71,26 @@ export interface SettingState {
   lyricsScrollPosition: "start" | "center";
   /** 下载路径 */
   downloadPath: string;
+  /** 音乐命名格式 */
+  fileNameFormat: "title" | "artist-title" | "title-artist";
+  /** 文件智能分类 */
+  folderStrategy: "none" | "artist" | "artist-album";
   /** 下载元信息 */
   downloadMeta: boolean;
   /** 下载封面 */
   downloadCover: boolean;
   /** 下载歌词 */
   downloadLyric: boolean;
+  /** 下载歌词翻译 */
+  downloadLyricTranslation: boolean;
+  /** 下载歌词音译 */
+  downloadLyricRomaji: boolean;
+  /** 模拟播放下载 */
+  usePlaybackForDownload: boolean;
   /** 保存元信息文件 */
   saveMetaFile: boolean;
+  /** 默认下载音质（弹窗默认选项） */
+  downloadSongLevel: SongLevelType;
   /** 代理协议 */
   proxyProtocol: "off" | "http" | "https";
   /** 代理地址 */
@@ -93,12 +111,16 @@ export interface SettingState {
   playDevice: "default" | string;
   /** 自动播放 */
   autoPlay: boolean;
+  /** 预载下一首 */
+  useNextPrefetch: boolean;
   /** 渐入渐出 */
   songVolumeFade: boolean;
   /** 渐入渐出时间 */
   songVolumeFadeTime: number;
   /** 是否使用解灰 */
   useSongUnlock: boolean;
+  /** 歌曲解锁音源 */
+  songUnlockServer: { key: SongUnlockServer; enabled: boolean }[];
   /** 显示倒计时 */
   countDownShow: boolean;
   /** 显示歌词条 */
@@ -107,6 +129,12 @@ export interface SettingState {
   playerType: "cover" | "record";
   /** 背景类型 */
   playerBackgroundType: "none" | "animation" | "blur" | "color";
+  /** 背景动画帧率 */
+  playerBackgroundFps: number;
+  /** 背景动画流动速度 */
+  playerBackgroundFlowSpeed: number;
+  /** 播放器元素自动隐藏 */
+  autoHidePlayerMeta: boolean;
   /** 记忆最后进度 */
   memoryLastSeek: boolean;
   /** 显示播放列表数量 */
@@ -115,8 +143,6 @@ export interface SettingState {
   showSpectrums: boolean;
   /** 是否开启 SMTC */
   smtcOpen: boolean;
-  /** 是否输出高清封面 */
-  smtcOutputHighQualityCover: boolean;
   /** 歌词模糊 */
   lyricsBlur: boolean;
   /** 鼠标悬停暂停 */
@@ -131,8 +157,12 @@ export interface SettingState {
   useAMSpring: boolean;
   /** 是否启用在线 TTML 歌词 */
   enableTTMLLyric: boolean;
+  /** AMLL DB 服务地址 */
+  amllDbServer: string;
   /** 菜单显示封面 */
   menuShowCover: boolean;
+  /** 菜单展开项 */
+  menuExpandedKeys: string[];
   /** 是否禁止休眠 */
   preventSleep: boolean;
   /** 本地文件路径 */
@@ -149,8 +179,6 @@ export interface SettingState {
   useRealIP: boolean;
   /** 真实 IP 地址 */
   realIP: string;
-  /** 全屏播放器缓存 */
-  fullPlayerCache: boolean;
   /** 是否打卡歌曲 */
   scrobbleSong: boolean;
   /** 动态封面 */
@@ -171,10 +199,58 @@ export interface SettingState {
   showDefaultLocalPath: boolean;
   /** 展示当前歌曲歌词状态信息 */
   showPlayMeta: boolean;
+  /** 显示歌曲音质 */
+  showSongQuality: boolean;
+  /** 显示歌曲特权标签 */
+  showSongPrivilegeTag: boolean;
+  /** 显示原唱翻唱标签 */
+  showSongOriginalTag: boolean;
+  /** 隐藏发现音乐 */
+  hideDiscover: boolean;
+  /** 隐藏私人漫游 */
+  hidePersonalFM: boolean;
+  /** 隐藏播客电台 */
+  hideRadioHot: boolean;
+  /** 隐藏我的收藏 */
+  hideLike: boolean;
+  /** 隐藏我的云盘 */
+  hideCloud: boolean;
+  /** 隐藏下载管理 */
+  hideDownload: boolean;
+  /** 隐藏本地歌曲 */
+  hideLocal: boolean;
+  /** 隐藏最近播放 */
+  hideHistory: boolean;
+  /** 隐藏创建的歌单 */
+  hideUserPlaylists: boolean;
+  /** 隐藏收藏的歌单 */
+  hideLikedPlaylists: boolean;
+  /** 隐藏心动模式 */
+  hideHeartbeatMode: boolean;
+  /** 启用搜索关键词获取 */
+  enableSearchKeyword: boolean;
+  /** 应用启动次数 */
+  appLaunchCount: number;
+  /** 隐藏 Star 弹窗 */
+  hideStarPopup: boolean;
+  /** 首页栏目顺序和显示配置 */
+  homePageSections: Array<{
+    key: "playlist" | "radar" | "artist" | "video" | "radio" | "album";
+    name: string;
+    visible: boolean;
+    order: number;
+  }>;
+  /** 用户协议版本 */
+  userAgreementVersion: string;
+  /** 自定义协议注册 **/
+  registryProtocol: {
+    orpheus: boolean;
+  };
 }
 
 export const useSettingStore = defineStore("setting", {
   state: (): SettingState => ({
+    schemaVersion: 0,
     themeMode: "auto",
     themeColorType: "default",
     themeCustomColor: "#fe7971",
@@ -186,6 +262,7 @@ export const useSettingStore = defineStore("setting", {
     hideVipTag: false,
     showSearchHistory: true,
     menuShowCover: true,
+    menuExpandedKeys: [],
     routeAnimation: "slide",
     useOnlineService: true,
     showCloseAppTip: true,
@@ -193,23 +270,30 @@ export const useSettingStore = defineStore("setting", {
     showTaskbarProgress: false,
     checkUpdateOnStart: true,
     preventSleep: false,
-    fullPlayerCache: false,
     useKeepAlive: true,
     songLevel: "exhigh",
     playDevice: "default",
     autoPlay: false,
+    useNextPrefetch: true,
     songVolumeFade: true,
     songVolumeFadeTime: 300,
     useSongUnlock: true,
+    songUnlockServer: [
+      { key: SongUnlockServer.BODIAN, enabled: true },
+      { key: SongUnlockServer.GEQUBAO, enabled: true },
+      { key: SongUnlockServer.NETEASE, enabled: true },
+    ],
     countDownShow: true,
     barLyricShow: true,
     playerType: "cover",
     playerBackgroundType: "blur",
+    playerBackgroundFps: 30,
+    playerBackgroundFlowSpeed: 4,
+    autoHidePlayerMeta: true,
     memoryLastSeek: true,
     showPlaylistCount: true,
     showSpectrums: false,
     smtcOpen: true,
-    smtcOutputHighQualityCover: false,
     playSongDemo: false,
     scrobbleSong: false,
     dynamicCover: false,
@@ -219,7 +303,8 @@ export const useSettingStore = defineStore("setting", {
     lyricFontBold: true,
     useAMLyrics: false,
     useAMSpring: false,
-    enableTTMLLyric: true,
+    enableTTMLLyric: false,
+    amllDbServer: defaultAMLLDbServer,
     showYrc: true,
     showYrcAnimation: true,
     showYrcLongEffect: true,
@@ -240,16 +325,51 @@ export const useSettingStore = defineStore("setting", {
     localSeparators: ["/", "&"],
     showLocalCover: true,
     downloadPath: "",
+    fileNameFormat: "title-artist",
+    folderStrategy: "none",
     downloadMeta: true,
     downloadCover: true,
     downloadLyric: true,
+    downloadLyricTranslation: true,
+    downloadLyricRomaji: false,
+    usePlaybackForDownload: false,
     saveMetaFile: false,
+    downloadSongLevel: "h",
     proxyProtocol: "off",
     proxyServe: "127.0.0.1",
     proxyPort: 80,
     useRealIP: false,
     realIP: "",
     showPlayMeta: false,
+    showSongQuality: true,
+    showSongPrivilegeTag: true,
+    showSongOriginalTag: true,
+    hideDiscover: false,
+    hidePersonalFM: false,
+    hideRadioHot: false,
+    hideLike: false,
+    hideCloud: false,
+    hideDownload: false,
+    hideLocal: false,
+    hideHistory: false,
+    hideUserPlaylists: false,
+    hideLikedPlaylists: false,
+    hideHeartbeatMode: false,
+    enableSearchKeyword: true,
+    appLaunchCount: 0,
+    hideStarPopup: true,
+    homePageSections: [
+      { key: "playlist", name: "专属歌单", visible: true, order: 0 },
+      { key: "radar", name: "雷达歌单", visible: true, order: 1 },
+      { key: "artist", name: "歌手推荐", visible: true, order: 2 },
+      { key: "video", name: "推荐 MV", visible: true, order: 3 },
+      { key: "radio", name: "推荐播客", visible: true, order: 4 },
+      { key: "album", name: "新碟上架", visible: true, order: 5 },
+    ],
+    userAgreementVersion: "",
+    registryProtocol: {
+      orpheus: false,
+    },
   }),
   getters: {
     /**
@@ -261,6 +381,35 @@ export const useSettingStore = defineStore("setting", {
     },
   },
   actions: {
+    /**
+     * 检查并执行数据迁移
+     * 应在应用启动时调用
+     */
+    checkAndMigrate() {
+      const currentVersion = this.schemaVersion ?? 0;
+      const targetVersion = CURRENT_SETTING_SCHEMA_VERSION;
+
+      if (currentVersion !== targetVersion) {
+        console.log(`[Setting Migration] 检测到版本差异: ${currentVersion} -> ${targetVersion}`);
+        // 保存当前完整状态
+        const currentState = { ...this.$state } as Partial<SettingState>;
+        // 计算需要更新的字段（迁移返回的更新）
+        const updates: Partial<SettingState> = {};
+        // 按版本顺序执行迁移，收集所有更新
+        for (let version = currentVersion + 1; version <= targetVersion; version++) {
+          const migration = settingMigrations[version];
+          if (migration) {
+            const migrationUpdates = migration(currentState);
+            Object.assign(updates, migrationUpdates);
+          }
+        }
+        // 只 patch 需要更新的字段
+        this.$patch(updates);
+        // 统一设置版本号
+        this.schemaVersion = targetVersion;
+        console.log(`[Setting Migration] 迁移完成，已更新到版本 ${targetVersion}`);
+      }
+    },
     // 更换明暗模式
     setThemeMode(mode?: "auto" | "light" | "dark") {
       // 若未传入

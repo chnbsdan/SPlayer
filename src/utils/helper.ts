@@ -1,20 +1,17 @@
-import type { SongType, UpdateLogType } from "@/types/main";
+import { QualityType, SongType, UpdateLogType } from "@/types/main";
 import { NTooltip, SelectOption } from "naive-ui";
 import { h, VNode } from "vue";
-import { useClipboard } from "@vueuse/core";
 import { getCacheData } from "./cache";
 import { updateLog } from "@/api/other";
 import { isEmpty } from "lodash-es";
 import { convertToLocalTime } from "./time";
 import { useSettingStore } from "@/stores";
 import { marked } from "marked";
-import SvgIcon from "@/components/Global/SvgIcon.vue";
 import { isElectron } from "./env";
+import SvgIcon from "@/components/Global/SvgIcon.vue";
+import Fuse from "fuse.js";
 
 type AnyObject = { [key: string]: any };
-
-// 必要数据
-let imageBlobURL: string = "";
 
 /**
  * 打开链接
@@ -75,50 +72,24 @@ export const renderOption = ({ node, option }: { node: VNode; option: SelectOpti
  */
 export const fuzzySearch = (keyword: string, data: SongType[]): SongType[] => {
   try {
-    const result: SongType[] = [];
-    const regex = new RegExp(keyword, "i");
+    if (!keyword || !data || !Array.isArray(data)) return [];
 
-    /**
-     * 递归函数：遍历对象及其嵌套属性，过滤包含关键词的对象
-     * @param {Object} obj - 要检查的对象
-     * @returns {boolean} - 如果找到匹配的属性值，返回 true；否则返回 false
-     */
-    const searchInObject = (obj: AnyObject): boolean => {
-      for (const key in obj) {
-        if (Object.prototype.hasOwnProperty.call(obj, key)) {
-          const value = obj[key];
-          // 如果属性值是对象，则递归调用
-          if (typeof value === "object" && value !== null) {
-            if (searchInObject(value)) {
-              return true;
-            }
-          }
-          // 检查属性值是否是字符串并包含关键词
-          if (value && typeof value === "string" && regex.test(value)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    };
+    const fuse = new Fuse(data, {
+      // 针对歌曲可读字段进行索引
+      keys: [
+        { name: "name", weight: 0.5 },
+        { name: "alia", weight: 0.2 },
+        { name: "artists", weight: 0.15 },
+        { name: "artists.name", weight: 0.15 },
+        { name: "album", weight: 0.1 },
+        { name: "album.name", weight: 0.1 },
+        { name: "dj.name", weight: 0.05 },
+      ],
+      threshold: 0.35, // 0 精确匹配 ~ 1 完全模糊
+      ignoreLocation: true, // 不要求关键词位置接近
+    });
 
-    if (!data) return [];
-
-    // 如果传入的是数组，遍历数组
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        if (searchInObject(item)) {
-          result.push(item);
-        }
-      }
-    } else {
-      // 如果传入的是对象，直接调用递归函数
-      if (searchInObject(data)) {
-        result.push(data);
-      }
-    }
-
-    return result;
+    return fuse.search(keyword).map((result) => result.item);
   } catch (error) {
     console.error("模糊搜索出现错误：", error);
     return [];
@@ -182,53 +153,50 @@ export const formatFileSize = (bytes: number): string => {
     return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
   }
 };
-
 /**
- * 将图片链接转为 BlobUrl
- * @param imageUrl 图片链接
- * @returns BlobUrl
- */
-export const convertImageUrlToBlobUrl = async (imageUrl: string) => {
-  const response = await fetch(imageUrl);
-  if (!response.ok) {
-    throw new Error("Network response was not ok");
-  }
-  // 将响应数据转换为 Blob 对象
-  const blob = await response.blob();
-  // 撤销之前生成的对象 URL
-  if (imageBlobURL) URL.revokeObjectURL(imageBlobURL);
-  // 生成对象 URL
-  imageBlobURL = URL.createObjectURL(blob);
-  return imageBlobURL;
-};
-
-/**
- * 复制数据到剪贴板
+ * 复制数据到剪贴板（原生实现）
  * @param text 要复制的数据
  * @param message 复制成功提示消息（可选）
- * @returns 无
  */
 export const copyData = async (text: any, message?: string) => {
-  const { copy, copied, isSupported } = useClipboard({ legacy: true });
-  if (!isSupported.value) {
-    window.$message.error("暂时无法使用复制功能");
-    return;
+  if (!text) return;
+  const content =
+    typeof text === "string" ? text.trim() : JSON.stringify(text, null, 2);
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(content);
+      window.$message.success(message ?? "已复制到剪贴板");
+      return;
+    } catch (err) {
+      console.error("clipboard.writeText 失败，尝试降级方案", err);
+    }
   }
-  // 开始复制
+  // 降级方案
   try {
-    if (!text) return;
-    text = typeof text === "string" ? text.trim() : JSON.stringify(text, null, 2);
-    await copy(text);
-    if (copied.value) {
+    const textarea = document.createElement("textarea");
+    textarea.value = content;
+    // 避免页面滚动
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    textarea.style.left = "-9999px";
+    // 添加到页面
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    // 执行复制
+    const success = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (success) {
       window.$message.success(message ?? "已复制到剪贴板");
     } else {
-      window.$message.error("复制出错，请重试");
+      throw new Error("execCommand 返回 false");
     }
   } catch (error) {
     window.$message.error("复制出错，请重试");
     console.error("复制出错：", error);
   }
 };
+
 
 /*
  * 获取剪贴板内容
@@ -386,36 +354,42 @@ export const shuffleArray = <T>(arr: T[]): T[] => {
 };
 
 /**
- * 在浏览器空闲时执行任务
- * @param task 要执行的任务
+ * 处理歌曲音质
+ * @param song 歌曲数据
+ * @param type 歌曲类型
+ * @returns 歌曲音质
  */
-export const runIdle = (task: () => void) => {
-  try {
-    const ric = window?.requestIdleCallback as ((cb: () => void) => number) | undefined;
-    if (typeof ric === "function") {
-      ric(() => {
-        try {
-          task();
-        } catch {
-          /* empty */
-        }
-      });
-    } else {
-      setTimeout(() => {
-        try {
-          task();
-        } catch {
-          /* empty */
-        }
-      }, 0);
-    }
-  } catch {
-    setTimeout(() => {
-      try {
-        task();
-      } catch {
-        /* empty */
-      }
-    }, 0);
+export const handleSongQuality = (
+  song: AnyObject | number,
+  type: "local" | "online" = "local",
+): QualityType | undefined => {
+  if (type === "local" && typeof song === "number") {
+    if (song >= 960000) return QualityType.HiRes;
+    if (song >= 441000) return QualityType.SQ;
+    if (song >= 320000) return QualityType.HQ;
+    if (song >= 160000) return QualityType.MQ;
+    return QualityType.LQ;
   }
+  // 含有 level 特殊处理
+  if (typeof song === "object" && "level" in song) {
+    if (song.level === "hires") return QualityType.HiRes;
+    if (song.level === "lossless") return QualityType.SQ;
+    if (song.level === "exhigh") return QualityType.HQ;
+    if (song.level === "higher") return QualityType.MQ;
+    if (song.level === "standard") return QualityType.LQ;
+    return undefined;
+  }
+  const order = [
+    { key: "hr", type: QualityType.HiRes },
+    { key: "sq", type: QualityType.SQ },
+    { key: "h", type: QualityType.HQ },
+    { key: "m", type: QualityType.MQ },
+    { key: "l", type: QualityType.LQ },
+  ];
+  for (const itemKey of order) {
+    if (song[itemKey.key] && Number(song[itemKey.key].br) > 0) {
+      return itemKey.type;
+    }
+  }
+  return undefined;
 };

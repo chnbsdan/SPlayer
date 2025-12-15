@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import type { SortType } from "@/types/main";
+import { QualityType, type SortType } from "@/types/main";
 import type { PlayModeType, RGB, ColorScheme } from "@/types/main";
 
 interface StatusState {
@@ -13,8 +13,6 @@ interface StatusState {
   showPlayBar: boolean;
   /** 全屏播放器 */
   showFullPlayer: boolean;
-  /** 全屏播放器激活状态 */
-  fullPlayerActive: boolean;
   /** 播放器功能显示 */
   playerMetaShow: boolean;
   /** 播放列表状态 */
@@ -42,12 +40,12 @@ interface StatusState {
     /** 封面主题颜色（暗色） */
     dark?: ColorScheme;
   };
-  /** 音乐频谱数据 */
-  spectrumsData: number[];
   /** 纯净歌词模式 */
   pureLyricMode: boolean;
   /** 是否使用 TTML 歌词 */
   usingTTMLLyric: boolean;
+  /** 当前歌曲音质 */
+  songQuality: QualityType | undefined;
   /** 当前播放索引 */
   playIndex: number;
   /** 歌词播放索引 */
@@ -106,7 +104,6 @@ export const useStatusStore = defineStore("status", {
     playUblock: false,
     playListShow: false,
     showFullPlayer: false,
-    fullPlayerActive: false,
     playerMetaShow: true,
     currentTime: 0,
     duration: 0,
@@ -115,7 +112,7 @@ export const useStatusStore = defineStore("status", {
     songCoverTheme: {},
     pureLyricMode: false,
     usingTTMLLyric: false,
-    spectrumsData: [],
+    songQuality: undefined,
     playIndex: -1,
     lyricIndex: -1,
     lyricLoading: false,
@@ -246,6 +243,24 @@ export const useStatusStore = defineStore("status", {
      */
     setEqPreset(preset: string) {
       this.eqPreset = preset;
+    },
+    /**
+     * 重置播放状态
+     */
+    resetPlayStatus() {
+      this.$patch({
+        currentTime: 0,
+        duration: 0,
+        progress: 0,
+        lyricIndex: -1,
+        playStatus: false,
+        playLoading: false,
+        playListShow: false,
+        showFullPlayer: false,
+        playHeartbeatMode: false,
+        personalFmMode: false,
+        playIndex: -1,
+      });
     },
   },
   // 持久化

@@ -49,11 +49,14 @@
           <SvgIcon :name="isMax ? 'WindowRestore' : 'WindowMaximize'" />
         </template>
       </n-button>
-      <n-button :focusable="false" title="关闭" tertiary circle @click="tryClose">
-        <template #icon>
-          <SvgIcon name="WindowClose" />
-        </template>
-      </n-button>
+      <div class="close-button-wrapper" @click="tryClose" title="关闭">
+        <n-button :focusable="false" title="关闭" tertiary circle @click.stop="tryClose">
+          <template #icon>
+            <SvgIcon name="WindowClose" />
+          </template>
+        </n-button>
+        <div class="close-expanded-area"></div>
+      </div>
     </n-flex>
     <!-- 关闭弹窗 -->
     <n-modal
@@ -91,10 +94,9 @@
 <script setup lang="ts">
 import type { DropdownOption } from "naive-ui";
 import { useSettingStore } from "@/stores";
-import { openLink, renderIcon } from "@/utils/helper";
+import { renderIcon } from "@/utils/helper";
 import { openSetting } from "@/utils/modal";
 import { isDev, isElectron } from "@/utils/env";
-import packageJson from "@/../package.json";
 
 const router = useRouter();
 const settingStore = useSettingStore();
@@ -160,34 +162,11 @@ const setOptions = computed<DropdownOption[]>(() => [
     type: "divider",
   },
   {
-    // 交流群
-    key: "qq",
-    label: "加入交流群",
-    props: {
-      onClick: () =>
-        openLink(
-          "https://qm.qq.com/cgi-bin/qm/qr?k=2-cVSf1bE0AvAehCib00qFEFdUvPaJ_k&jump_from=webapi&authKey=1NEhib9+GsmsXVo2rCc0IbRaVHeeRXJJ0gbsyKDcIwDdAzYySOubkFCvkV32+7Cw",
-        ),
-    },
-    icon: renderIcon("QQ"),
-  },
-  {
-    // 交流群
-    key: "github",
-    label: "开源仓库",
-    props: { onClick: () => openLink(packageJson.github) },
-    icon: renderIcon("Github"),
-  },
-  {
-    key: "divider-2",
-    type: "divider",
-  },
-  {
     // 重启
     key: "restart",
     label: "软件热重载",
     show: isElectron,
-    props: { onClick: () => window.location.reload() },
+    props: { onClick: () => window.electron.ipcRenderer.send("win-reload") },
     icon: renderIcon("Restart"),
   },
   {
@@ -259,6 +238,21 @@ onMounted(() => {
   .client-control {
     .divider {
       margin: 0 0 0 12px;
+    }
+    .close-button-wrapper {
+      position: relative;
+      cursor: pointer;
+      .close-expanded-area {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 60px;
+        height: 70px;
+        background-color: transparent;
+        cursor: pointer;
+        -webkit-app-region: no-drag;
+        z-index: 1000;
+      }
     }
   }
 }

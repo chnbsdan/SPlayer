@@ -1,12 +1,19 @@
-# SPlayer
+<div align="center">
+<img alt="logo" height="100" width="100" src="public/icons/favicon.png" />
+<h2>SPlayer</h2>
+<p>一个简约的音乐播放器</p>
 
-> A simple music player
+[API Docs](./docs/API.md) | [交流群](https://qm.qq.com/cgi-bin/qm/qr?k=2-cVSf1bE0AvAehCib00qFEFdUvPaJ_k&jump_from=webapi&authKey=1NEhib9+GsmsXVo2rCc0IbRaVHeeRXJJ0gbsyKDcIwDdAzYySOubkFCvkV32+7Cw) | [开发版](https://github.com/imsyy/SPlayer/actions) | [发行版](https://github.com/imsyy/SPlayer/releases)
+
+<br />
 
 ![Stars](https://img.shields.io/github/stars/imsyy/SPlayer?style=flat)
 ![Version](https://img.shields.io/github/v/release/imsyy/SPlayer)
 [![Build Release](https://github.com/imsyy/SPlayer/actions/workflows/release.yml/badge.svg)](https://github.com/imsyy/SPlayer/actions/workflows/release.yml)
 ![License](https://img.shields.io/github/license/imsyy/SPlayer)
 ![Issues](https://img.shields.io/github/issues/imsyy/SPlayer)
+
+</div>
 
 ![main](/screenshots/SPlayer.jpg)
 
@@ -32,7 +39,9 @@
 
 ## 💬 交流群
 
-![交流群](/screenshots/welcome.png)
+<a href="https://qm.qq.com/cgi-bin/qm/qr?k=2-cVSf1bE0AvAehCib00qFEFdUvPaJ_k&jump_from=webapi&authKey=1NEhib9+GsmsXVo2rCc0IbRaVHeeRXJJ0gbsyKDcIwDdAzYySOubkFCvkV32+7Cw" target="_blank">
+<img src="screenshots/welcome.png" alt="交流群" width="300" />
+</a>
 
 ## 👀 Demo
 
@@ -50,7 +59,7 @@
 - 📁 本地歌曲管理及分类（建议先使用 [音乐标签](https://www.cnblogs.com/vinlxc/p/11347744.html) 进行匹配后再使用）
 - 📁 简易的本地音乐标签编辑及封面修改
 - 🎵 **支持播放部分无版权歌曲（可能会与原曲不匹配，客户端独占功能）**
-- ⬇️ 下载歌曲（ 最高支持 Hi-Res，需具有相应会员账号 ）
+- ⬇️ 下载歌曲 / 批量下载（ 最高支持 Hi-Res，需具有相应会员账号 ）
 - ➕ 新建歌单及歌单编辑
 - ❤️ 收藏 / 取消收藏歌单或歌手
 - 🎶 每日推荐歌曲
@@ -66,8 +75,7 @@
 - ⏭️ 音乐渐入渐出
 - 🔄 支持 PWA
 - 💬 支持评论区
-- 📱 移动端基础适配
-- ~~🌐 `i18n` 支持~~
+- ~~📱 移动端基础适配~~
 
 ## 🖼️ screenshots
 
@@ -125,7 +133,9 @@
 
 可以通过 `GitHub Actions` 工作流获取最新的开发版，目前开发版仅提供 `Win` 版本
 
-[Dev Workflow](https://github.com/imsyy/SPlayer/actions/workflows/build.yml)
+> 如需其他平台的开发版构建，请自行 Fork 本项目并参考 `.github/workflows/release.yml` 创建相应的工作流
+
+[Dev Workflow](https://github.com/imsyy/SPlayer/actions/workflows/dev.yml)
 
 ## Snap Store
 
@@ -226,6 +236,8 @@ docker run -d --name SPlayer -p 25884:25884 imsyy/splayer:latest
 4. 使用 `pnpm install` 安装项目依赖（若安装过程中遇到网络错误，请使用国内镜像源替代，此处不再赘述）
 5. 复制 `/.env.example` 文件并重命名为 `/.env` 并修改配置
 6. 打包客户端，请依据你的系统类型来选择，打包成功后，会输出安装包或可执行文件在 `/dist` 目录中，可自行安装
+
+   > 默认情况下，构建命令仅会构建当前系统架构的版本。如需构建特定架构（如 x64 + arm64），请在命令后追加参数，例如：`pnpm build:win -- --x64 --arm64`
 
    | 命令               | 系统类型 |
    | ------------------ | -------- |
